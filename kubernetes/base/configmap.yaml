@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+data:
+  DB_HOST: "REPLACE_WITH_RDS_ENDPOINT"
+  DB_PORT: "3306"
+  DB_NAME: "ecommercedb"
+  DB_USER: "admin"
+  DYNAMODB_TABLE: "ecommerce-products"
+  AWS_REGION: "us-east-1"
+  KAFKA_BOOTSTRAP_SERVERS: "REPLACE_WITH_MSK_BROKERS"
+  USER_SERVICE_URL: "http://user-service:5001"
+  PRODUCT_SERVICE_URL: "http://product-service:5002"
+  ORDER_SERVICE_URL: "http://order-service:5003"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: default
+type: Opaque
+stringData:
+  DB_PASSWORD: "Admin123456!"
