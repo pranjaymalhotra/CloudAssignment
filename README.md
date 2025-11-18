@@ -1,14 +1,41 @@
-# Cloud Computing Assignment - E-Commerce Microservices Platform
+# E-Commerce Microservices on AWS - Cloud Computing Assignment
+
+## 🚀 Quick Start
+
+### Deploy Everything (Automated)
+```bash
+chmod +x deploy.sh teardown.sh test-api.sh
+./deploy.sh
+```
+⏱️ **Time:** ~40 minutes | 💰 **Cost:** ~$0.36/hour
+
+### Test & Access
+```bash
+./test-api.sh                    # Run automated tests
+kubectl get svc frontend         # Get frontend URL
+```
+
+### Destroy Everything
+```bash
+./teardown.sh                    # Complete cleanup
+```
+
+---
 
 ## 🎯 Project Overview
 
-A comprehensive cloud-native e-commerce application with 6 microservices deployed across AWS and GCP, demonstrating:
-- Infrastructure as Code (Terraform)
-- Kubernetes orchestration (EKS)
-- GitOps deployment (ArgoCD)
-- Real-time stream processing (Flink on GCP)
-- Serverless computing (Lambda)
-- Comprehensive monitoring (Prometheus + Grafana)
+A comprehensive cloud-native e-commerce application demonstrating:
+- ✅ Infrastructure as Code (Terraform) - **100% Complete**
+- ✅ 5 Microservices + Serverless Lambda - **83% Complete**
+- ✅ Kubernetes orchestration (EKS) - **100% Complete**
+- ✅ Multi-database architecture (RDS + DynamoDB) - **100% Complete**
+- ✅ Kafka messaging (MSK) - **100% Complete**
+- ✅ Automated deployment/teardown - **100% Complete**
+- ⏳ GitOps deployment (ArgoCD) - **30% Complete** (config exists)
+- ⏳ Real-time stream processing (Flink on GCP) - **30% Complete** (infra ready)
+- ⏳ Comprehensive monitoring (Prometheus + Grafana) - **0% Complete**
+
+**Overall Progress:** ~58% | See [REQUIREMENTS_STATUS.md](REQUIREMENTS_STATUS.md) for details
 
 ## 🏗️ Architecture
 

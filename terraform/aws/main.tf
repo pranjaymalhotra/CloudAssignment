@@ -9,6 +9,8 @@ terraform {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 provider "aws" {
   region = var.aws_region
   
@@ -186,6 +188,11 @@ output "s3_bucket_name" {
   value = aws_s3_bucket.data_bucket.id
 }
 
+output "msk_bootstrap_servers" {
+  value       = module.msk.bootstrap_brokers
+  description = "MSK Kafka bootstrap servers"
+}
+
 output "msk_bootstrap_brokers" {
   value = module.msk.bootstrap_brokers
 }
@@ -196,4 +203,14 @@ output "lambda_function_name" {
 
 output "ecr_repositories" {
   value = { for k, v in aws_ecr_repository.microservices : k => v.repository_url }
+}
+
+output "aws_account_id" {
+  value       = data.aws_caller_identity.current.account_id
+  description = "AWS Account ID"
+}
+
+output "aws_region" {
+  value       = var.aws_region
+  description = "AWS Region"
 }
