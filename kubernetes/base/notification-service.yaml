@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: notification-service
-        image: REPLACE_WITH_ECR_URI/ecommerce-notification-service:latest
+        image: 129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-notification-service:latest
         ports:
         - containerPort: 5004
         envFrom:

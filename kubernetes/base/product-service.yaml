@@ -18,7 +18,7 @@ spec:
       serviceAccountName: product-service-sa
       containers:
       - name: product-service
-        image: REPLACE_WITH_ECR_URI/ecommerce-product-service:latest
+        image: 129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product-service:latest
         ports:
         - containerPort: 5002
         envFrom:

@@ -8,6 +8,7 @@ resource "aws_eks_cluster" "main" {
     subnet_ids              = var.private_subnet_ids
     endpoint_private_access = true
     endpoint_public_access  = true
+    security_group_ids      = [aws_security_group.eks_cluster.id]
   }
   
   depends_on = [
@@ -111,6 +112,22 @@ resource "aws_security_group" "eks_cluster" {
   name        = "${var.cluster_name}-cluster-sg"
   description = "Security group for EKS cluster"
   vpc_id      = var.vpc_id
+  
+  ingress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+    description = "Allow nodes to communicate with each other"
+  }
+  
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow pods to communicate with the cluster API Server"
+  }
   
   egress {
     from_port   = 0

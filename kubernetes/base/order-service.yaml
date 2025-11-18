@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: order-service
-        image: REPLACE_WITH_ECR_URI/ecommerce-order-service:latest
+        image: 129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-order-service:latest
         ports:
         - containerPort: 5003
         envFrom:
