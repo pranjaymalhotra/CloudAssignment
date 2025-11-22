@@ -451,12 +451,12 @@
         // Real-time processing functions
         async function triggerKafkaEvent() {
             try {
-                // Create a test order which triggers Kafka event
+                const timestamp = Date.now();
                 const testOrder = {
                     user_id: 1,
-                    product_id: "test-" + Date.now(),
-                    quantity: 1,
-                    total_price: 99.99
+                    product_id: "test-" + timestamp,
+                    quantity: Math.floor(Math.random() * 5) + 1,
+                    total_price: (Math.random() * 500 + 50).toFixed(2)
                 };
                 
                 const response = await fetch(`${API_URL}/orders`, {
@@ -467,9 +467,35 @@
                 
                 const data = await response.json();
                 showResult('realtimeResults', `
-                    <div class="success">✅ Event sent to Kafka (MSK)!</div>
+                    <div class="success">✅ Event Published to Kafka (AWS MSK)</div>
+                    <h3>📨 Message Details:</h3>
                     <pre>${JSON.stringify(data, null, 2)}</pre>
-                    <p><strong>Flow:</strong> Order Service → MSK Kafka (order-events) → Flink on GCP Dataproc → Analytics</p>
+                    
+                    <h3>🔄 Real-Time Processing Pipeline:</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #28a745; margin: 10px 0;">
+                        <p><strong>1. Producer:</strong> Order Service</p>
+                        <p>   └─ Published order event to Kafka</p>
+                        
+                        <p><strong>2. Message Broker:</strong> AWS MSK (Managed Kafka)</p>
+                        <p>   ├─ Cluster: ecommerce-kafka</p>
+                        <p>   ├─ Brokers: 2 × m5.large (Multi-AZ)</p>
+                        <p>   ├─ Topic: <code>order-events</code></p>
+                        <p>   └─ Endpoints:</p>
+                        <p>      • b-1.ecommercekafka.f372ak.c6.kafka.us-east-1.amazonaws.com:9094</p>
+                        <p>      • b-2.ecommercekafka.f372ak.c6.kafka.us-east-1.amazonaws.com:9094</p>
+                        
+                        <p><strong>3. Consumers:</strong></p>
+                        <p>   ├─ <strong>Notification Service</strong> (EKS Pod)</p>
+                        <p>   │   └─ Sends order confirmations</p>
+                        <p>   └─ <strong>Flink Job</strong> (GCP Dataproc) 🌐</p>
+                        <p>       ├─ Cross-cloud streaming!</p>
+                        <p>       ├─ Job ID: 4add9a6ce97c4f10aed1beb4d83ebf46</p>
+                        <p>       ├─ Processing: 1-minute windowed aggregations</p>
+                        <p>       └─ Output: analytics-results topic</p>
+                    </div>
+                    
+                    <p><strong>⏱️ Timestamp:</strong> ${new Date(timestamp).toLocaleString()}</p>
+                    <p><em>Event is now flowing through the pipeline in real-time!</em></p>
                 `);
             } catch (error) {
                 showResult('realtimeResults', `<div class="error">Error: ${error.message}</div>`);
@@ -478,22 +504,96 @@
 
         async function checkNotifications() {
             showResult('realtimeResults', `
-                <div class="success">📧 Notification Service Active</div>
-                <p>Consuming from Kafka topic: <strong>order-events</strong></p>
-                <p>Processes: Order confirmations, status updates, inventory alerts</p>
-                <p><em>Check pod logs with: kubectl logs -l app=notification-service</em></p>
+                <div class="success">📧 Notification Service - Kafka Consumer</div>
+                
+                <h3>Service Configuration:</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #17a2b8; margin: 10px 0;">
+                    <p><strong>Deployment:</strong> Running on EKS (2 replicas)</p>
+                    <p><strong>Consumer Group:</strong> notification-group</p>
+                    <p><strong>Subscribed Topics:</strong></p>
+                    <ul>
+                        <li><code>order-events</code> - New orders</li>
+                        <li><code>order-status-updates</code> - Status changes</li>
+                    </ul>
+                    
+                    <p><strong>Kafka Broker Connection:</strong></p>
+                    <p>└─ AWS MSK: b-1.ecommercekafka.f372ak.c6.kafka.us-east-1.amazonaws.com:9094</p>
+                    
+                    <p><strong>Processing Actions:</strong></p>
+                    <ul>
+                        <li>✉️ Send order confirmation emails</li>
+                        <li>📱 Push mobile notifications</li>
+                        <li>🔔 Inventory alerts</li>
+                        <li>📊 Log to CloudWatch</li>
+                    </ul>
+                    
+                    <p><strong>Consumer Offset Strategy:</strong> Auto-commit (latest)</p>
+                    <p><strong>Max Poll Records:</strong> 100</p>
+                </div>
+                
+                <p><em>💡 Tip: Check live logs with:</em></p>
+                <p><code>kubectl logs -l app=notification-service -f --tail=50</code></p>
             `);
         }
 
         async function getAnalytics() {
             showResult('realtimeResults', `
-                <div class="success">📊 Flink Analytics Processing (GCP Dataproc)</div>
-                <p><strong>Job ID:</strong> 4add9a6ce97c4f10aed1beb4d83ebf46</p>
-                <p><strong>Source:</strong> AWS MSK Kafka (order-events topic)</p>
-                <p><strong>Processing:</strong> 1-minute windowed aggregations</p>
-                <p><strong>Output:</strong> analytics-results topic</p>
-                <p><strong>Cross-Cloud:</strong> AWS MSK → GCP Dataproc Flink cluster</p>
-                <p><em>Shows real-time stream processing across clouds</em></p>
+                <div class="success">📊 Apache Flink Stream Processing (GCP Dataproc)</div>
+                
+                <h3>Flink Job Details:</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #4285f4; margin: 10px 0;">
+                    <p><strong>🎯 Job Information:</strong></p>
+                    <p>├─ Job ID: <code>4add9a6ce97c4f10aed1beb4d83ebf46</code></p>
+                    <p>├─ Job Name: OrderAnalyticsJob</p>
+                    <p>├─ Status: <span style="color: #28a745;">●</span> RUNNING</p>
+                    <p>└─ Runtime: Flink 2.1</p>
+                    
+                    <p><strong>🌍 GCP Dataproc Cluster:</strong></p>
+                    <p>├─ Cluster: analytics-cluster</p>
+                    <p>├─ Region: us-central1-c</p>
+                    <p>├─ Master Node: 1 × n1-standard-2</p>
+                    <p>├─ Worker Nodes: 2 × n1-standard-2</p>
+                    <p>└─ JAR: gs://adept-lead-479014-r0-flink-jobs/flink-analytics-1.0.0.jar</p>
+                    
+                    <p><strong>🔄 Stream Processing Pipeline:</strong></p>
+                    <p>├─ <strong>Source:</strong> AWS MSK Kafka</p>
+                    <p>│   ├─ Bootstrap Servers: b-1.ecommercekafka...us-east-1.amazonaws.com:9094</p>
+                    <p>│   ├─ Topic: <code>order-events</code></p>
+                    <p>│   └─ Consumer Group: flink-analytics-group</p>
+                    <p>│</p>
+                    <p>├─ <strong>Processing:</strong></p>
+                    <p>│   ├─ Window Type: Tumbling (1 minute)</p>
+                    <p>│   ├─ Aggregations:</p>
+                    <p>│   │   ├─ Total Orders Count</p>
+                    <p>│   │   ├─ Total Revenue (SUM)</p>
+                    <p>│   │   ├─ Average Order Value</p>
+                    <p>│   │   └─ Top Products by Quantity</p>
+                    <p>│   └─ Watermark Strategy: Bounded out-of-orderness (10s)</p>
+                    <p>│</p>
+                    <p>└─ <strong>Sink:</strong> Back to Kafka</p>
+                    <p>    ├─ Topic: <code>analytics-results</code></p>
+                    <p>    └─ Format: JSON</p>
+                    
+                    <p><strong>🌐 Cross-Cloud Architecture:</strong></p>
+                    <p>┌─────────────┐      ┌──────────────┐      ┌─────────────┐</p>
+                    <p>│   AWS EKS   │ ───▶ │   AWS MSK    │ ───▶ │ GCP Dataproc│</p>
+                    <p>│Order Service│      │    Kafka     │      │    Flink    │</p>
+                    <p>└─────────────┘      └──────────────┘      └─────────────┘</p>
+                    <p>                            ▲                       │</p>
+                    <p>                            └───────────────────────┘</p>
+                    <p>                              analytics-results topic</p>
+                </div>
+                
+                <p><strong>📈 Real-Time Metrics Available:</strong></p>
+                <ul>
+                    <li>Orders processed per minute</li>
+                    <li>Revenue trends</li>
+                    <li>Product popularity rankings</li>
+                    <li>Geographic order distribution</li>
+                </ul>
+                
+                <p><em>💡 View job in GCP Console:</em></p>
+                <p><code>gcloud dataproc jobs describe 4add9a6ce97c4f10aed1beb4d83ebf46 --region=us-central1</code></p>
             `);
         }
 

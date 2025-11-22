@@ -1,0 +1,106 @@
+{
+  "dashboard": {
+    "title": "E-Commerce Microservices Overview",
+    "tags": ["microservices", "kubernetes", "ecommerce"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Request Rate by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"default\"}[5m])) by (pod)",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      },
+      {
+        "title": "CPU Usage by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m])) by (pod) * 100",
+            "legendFormat": "{{pod}}"
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(container_memory_usage_bytes{namespace=\"default\"}) by (pod) / 1024 / 1024",
+            "legendFormat": "{{pod}} (MB)"
+          }
+        ]
+      },
+      {
+        "title": "Pod Status",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(kube_pod_status_phase{namespace=\"default\", phase=\"Running\"})",
+            "legendFormat": "Running Pods"
+          }
+        ]
+      },
+      {
+        "title": "HPA Current Replicas",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"default\"}",
+            "legendFormat": "{{horizontalpodautoscaler}}"
+          },
+          {
+            "expr": "kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"default\"}",
+            "legendFormat": "{{horizontalpodautoscaler}} (max)"
+          }
+        ]
+      },
+      {
+        "title": "Database Connections (RDS)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "mysql_global_status_threads_connected",
+            "legendFormat": "Active Connections"
+          }
+        ]
+      },
+      {
+        "title": "Kafka Consumer Lag",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(kafka_consumer_lag_sum) by (consumergroup, topic)",
+            "legendFormat": "{{consumergroup}} - {{topic}}"
+          }
+        ]
+      },
+      {
+        "title": "HTTP Response Codes",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (status)",
+            "legendFormat": "HTTP {{status}}"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

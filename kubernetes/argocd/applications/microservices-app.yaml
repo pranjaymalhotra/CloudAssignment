@@ -4,9 +4,9 @@ metadata:
   name: microservices
   namespace: argocd
 spec:
-  project: default
+  project: ecommerce
   source:
-    repoURL: https://github.com/pranjaymalhotra/CloudAssignment.git
+    repoURL: https://github.com/pranjaymalhotra/CloudAssignment
     targetRevision: main
     path: kubernetes/base
   destination:
@@ -14,7 +14,7 @@ spec:
     namespace: default
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
