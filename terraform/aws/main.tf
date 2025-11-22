@@ -28,8 +28,6 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-data "aws_caller_identity" "current" {}
-
 # VPC Module
 module "vpc" {
   source = "./modules/vpc"
@@ -89,6 +87,33 @@ resource "aws_dynamodb_table" "products" {
   
   tags = {
     Name = "ecommerce-products"
+  }
+}
+
+# DynamoDB Table for Analytics
+resource "aws_dynamodb_table" "analytics" {
+  name           = "ecommerce-analytics"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "window_id"
+  
+  attribute {
+    name = "window_id"
+    type = "S"
+  }
+  
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+  
+  global_secondary_index {
+    name            = "TimestampIndex"
+    hash_key        = "timestamp"
+    projection_type = "ALL"
+  }
+  
+  tags = {
+    Name = "ecommerce-analytics"
   }
 }
 
@@ -193,10 +218,6 @@ output "msk_bootstrap_servers" {
   description = "MSK Kafka bootstrap servers"
 }
 
-output "msk_bootstrap_brokers" {
-  value = module.msk.bootstrap_brokers
-}
-
 output "lambda_function_name" {
   value = module.lambda.function_name
 }
@@ -213,4 +234,75 @@ output "aws_account_id" {
 output "aws_region" {
   value       = var.aws_region
   description = "AWS Region"
+}
+
+# IAM Role for Product Service to access DynamoDB
+data "aws_iam_policy_document" "product_service_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:default:product-service-sa"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "product_service" {
+  name               = "product-service-dynamodb-role"
+  assume_role_policy = data.aws_iam_policy_document.product_service_assume_role.json
+
+  tags = {
+    Name = "product-service-role"
+  }
+}
+
+resource "aws_iam_policy" "product_service_dynamodb" {
+  name        = "product-service-dynamodb-policy"
+  description = "Allow product service to access DynamoDB"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = [
+          aws_dynamodb_table.products.arn,
+          "${aws_dynamodb_table.products.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "product_service_dynamodb" {
+  role       = aws_iam_role.product_service.name
+  policy_arn = aws_iam_policy.product_service_dynamodb.arn
+}
+
+output "product_service_role_arn" {
+  value       = aws_iam_role.product_service.arn
+  description = "IAM Role ARN for product service"
 }

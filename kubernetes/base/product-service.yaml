@@ -64,4 +64,4 @@ metadata:
   name: product-service-sa
   namespace: default
   annotations:
-    eks.amazonaws.com/role-arn: "REPLACE_WITH_IAM_ROLE_ARN"
+    eks.amazonaws.com/role-arn: "arn:aws:iam::129257836401:role/product-service-dynamodb-role"

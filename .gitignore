@@ -48,6 +48,15 @@ pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 
+# Reference Documents (do not push)
+*_OLD.md
+*_BACKUP.md
+REFERENCE_*.md
+NOTES_*.md
+PROJECT_SUMMARY.md
+REQUIREMENTS_VERIFICATION.md
+GCP_SETUP_GUIDE.md
+
 # Backups
 *.bak
 

@@ -38,6 +38,20 @@
             font-size: 1.1em;
             opacity: 0.9;
         }
+        .cloud-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .cloud-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
         .status {
             padding: 20px 30px;
             background: #f8f9fa;
@@ -162,7 +176,11 @@
     <div class="container">
         <div class="header">
             <h1>🛍️ E-Commerce Microservices</h1>
-            <p>Full-Stack Cloud Application on AWS EKS</p>
+            <p>Multi-Cloud Platform: AWS EKS + GCP Dataproc</p>
+            <div class="cloud-badges">
+                <span class="cloud-badge">☁️ AWS: EKS • RDS • MSK • DynamoDB • S3 • Lambda</span>
+                <span class="cloud-badge">☁️ GCP: Dataproc (Flink) • Cloud Storage</span>
+            </div>
         </div>
         
         <div class="status">
@@ -225,39 +243,6 @@
                 <button onclick="createProduct()">Create Product</button>
                 <button onclick="getProducts()" style="margin-top: 10px; background: #6c757d;">View All Products</button>
                 <div id="productResults" class="results" style="display: none;"></div>
-            </div>
-
-            <!-- Real-Time Features -->
-            <div class="section">
-                <h2>⚡ Real-Time Processing</h2>
-                <button onclick="triggerKafkaEvent()">Send Event to Kafka (MSK)</button>
-                <button onclick="checkNotifications()" style="margin-top: 10px; background: #231f20;">Check Notifications</button>
-                <button onclick="getAnalytics()" style="margin-top: 10px; background: #4285f4;">View Analytics (Flink)</button>
-                <div id="realtimeResults" class="results" style="display: none;"></div>
-            </div>
-
-            <!-- Database Status -->
-            <div class="section">
-                <h2>💾 Multi-Database Health</h2>
-                <button onclick="checkDatabases()">Check All Databases</button>
-                <button onclick="testCrossCloud()" style="margin-top: 10px; background: linear-gradient(90deg, #ff9900 50%, #4285f4 50%);">AWS ↔ GCP Test</button>
-                <div id="dbResults" class="results" style="display: none;"></div>
-            </div>
-
-            <!-- Kubernetes & GitOps -->
-            <div class="section">
-                <h2>☸️ Kubernetes & GitOps</h2>
-                <button onclick="showK8sInfo()">EKS Cluster Info</button>
-                <button onclick="openArgoCD()" style="margin-top: 10px; background: #e8602d;">Open ArgoCD</button>
-                <div id="k8sResults" class="results" style="display: none;"></div>
-            </div>
-
-            <!-- Monitoring & Observability -->
-            <div class="section">
-                <h2>📊 Monitoring Stack</h2>
-                <button onclick="openGrafana()">Open Grafana Dashboard</button>
-                <button onclick="showMonitoringInfo()" style="margin-top: 10px; background: #f46800;">Prometheus Info</button>
-                <div id="monitoringResults" class="results" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -446,197 +431,6 @@
             const element = document.getElementById(elementId);
             element.innerHTML = html;
             element.style.display = 'block';
-        }
-
-        // Real-time processing functions
-        async function triggerKafkaEvent() {
-            try {
-                // Create a test order which triggers Kafka event
-                const testOrder = {
-                    user_id: 1,
-                    product_id: "test-" + Date.now(),
-                    quantity: 1,
-                    total_price: 99.99
-                };
-                
-                const response = await fetch(`${API_URL}/orders`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(testOrder)
-                });
-                
-                const data = await response.json();
-                showResult('realtimeResults', `
-                    <div class="success">✅ Event sent to Kafka (MSK)!</div>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                    <p><strong>Flow:</strong> Order Service → MSK Kafka (order-events) → Flink on GCP Dataproc → Analytics</p>
-                `);
-            } catch (error) {
-                showResult('realtimeResults', `<div class="error">Error: ${error.message}</div>`);
-            }
-        }
-
-        async function checkNotifications() {
-            showResult('realtimeResults', `
-                <div class="success">📧 Notification Service Active</div>
-                <p>Consuming from Kafka topic: <strong>order-events</strong></p>
-                <p>Processes: Order confirmations, status updates, inventory alerts</p>
-                <p><em>Check pod logs with: kubectl logs -l app=notification-service</em></p>
-            `);
-        }
-
-        async function getAnalytics() {
-            showResult('realtimeResults', `
-                <div class="success">📊 Flink Analytics Processing (GCP Dataproc)</div>
-                <p><strong>Job ID:</strong> 4add9a6ce97c4f10aed1beb4d83ebf46</p>
-                <p><strong>Source:</strong> AWS MSK Kafka (order-events topic)</p>
-                <p><strong>Processing:</strong> 1-minute windowed aggregations</p>
-                <p><strong>Output:</strong> analytics-results topic</p>
-                <p><strong>Cross-Cloud:</strong> AWS MSK → GCP Dataproc Flink cluster</p>
-                <p><em>Shows real-time stream processing across clouds</em></p>
-            `);
-        }
-
-        async function checkDatabases() {
-            let html = '<h3>Database Status:</h3>';
-            
-            try {
-                // Test RDS MySQL
-                const usersResp = await fetch(`${API_URL}/users`);
-                const userData = await usersResp.json();
-                html += `<div class="item success">
-                    ✅ <strong>RDS MySQL</strong> (db.t3.micro)<br>
-                    Endpoint: ecommercedb.catc86eyes0c.us-east-1.rds.amazonaws.com<br>
-                    Tables: users, orders<br>
-                    Records: ${Array.isArray(userData) ? userData.length : 0} users
-                </div>`;
-
-                // Test DynamoDB
-                html += `<div class="item">
-                    ⚠️ <strong>DynamoDB</strong> (PAY_PER_REQUEST)<br>
-                    Tables: ecommerce-products, ecommerce-analytics<br>
-                    Status: Requires IAM role binding for pod access
-                </div>`;
-
-                showResult('dbResults', html);
-            } catch (error) {
-                showResult('dbResults', `<div class="error">Error: ${error.message}</div>`);
-            }
-        }
-
-        async function testCrossCloud() {
-            showResult('dbResults', `
-                <div class="success">🌐 Multi-Cloud Architecture Active</div>
-                <h4>AWS Resources:</h4>
-                <ul>
-                    <li>EKS Cluster (Kubernetes 1.28) - 2 nodes</li>
-                    <li>RDS MySQL - ecommercedb (db.t3.micro)</li>
-                    <li>MSK Kafka - 2 brokers (m5.large)</li>
-                    <li>DynamoDB - 2 tables (products, analytics)</li>
-                    <li>Lambda - S3 event processor</li>
-                    <li>ECR - 6 container images</li>
-                </ul>
-                <h4>GCP Resources:</h4>
-                <ul>
-                    <li>Dataproc Cluster - Flink 2.1 (1 master + 2 workers)</li>
-                    <li>Cloud Storage - Analytics JAR (73MB)</li>
-                    <li>VPC - Firewall rules for cross-cloud</li>
-                </ul>
-                <p><strong>Cross-Cloud Data Flow:</strong><br>
-                AWS EKS → MSK Kafka → GCP Dataproc Flink → Back to Kafka analytics-results</p>
-            `);
-        }
-
-        // Kubernetes & GitOps functions
-        async function showK8sInfo() {
-            showResult('k8sResults', `
-                <div class="success">☸️ AWS EKS Cluster Details</div>
-                <p><strong>Cluster Name:</strong> ecommerce-cluster</p>
-                <p><strong>Kubernetes Version:</strong> 1.28</p>
-                <p><strong>Node Count:</strong> 2 x t3.medium nodes</p>
-                <p><strong>Region:</strong> us-east-1</p>
-                <p><strong>Deployed Services:</strong></p>
-                <ul>
-                    <li>✅ API Gateway (2 replicas with HPA)</li>
-                    <li>✅ User Service (2 replicas)</li>
-                    <li>✅ Product Service (2 replicas)</li>
-                    <li>✅ Order Service (2 replicas with HPA)</li>
-                    <li>✅ Notification Service (2 replicas)</li>
-                    <li>✅ Analytics Service (2 replicas)</li>
-                    <li>✅ Frontend (2 replicas)</li>
-                </ul>
-                <p><strong>Features:</strong></p>
-                <ul>
-                    <li>Horizontal Pod Autoscaling (HPA)</li>
-                    <li>LoadBalancer Services</li>
-                    <li>ConfigMaps & Secrets Management</li>
-                    <li>Multi-AZ Deployment</li>
-                </ul>
-            `);
-        }
-
-        function openArgoCD() {
-            const argoURL = 'http://abfe27899ec454f47ac5df288916cde0-779693884.us-east-1.elb.amazonaws.com';
-            showResult('k8sResults', `
-                <div class="success">🔄 ArgoCD GitOps Controller</div>
-                <p><strong>Status:</strong> Running in 'argocd' namespace</p>
-                <p><strong>URL:</strong> <a href="${argoURL}" target="_blank">${argoURL}</a></p>
-                <p><strong>Login:</strong></p>
-                <ul>
-                    <li>Username: <code>admin</code></li>
-                    <li>Password: <code>Rokivt5AdaHohNpE</code></li>
-                </ul>
-                <p><strong>Purpose:</strong> GitOps continuous delivery for Kubernetes</p>
-                <p><strong>Applications:</strong> Declarative sync from Git repository</p>
-                <button onclick="window.open('${argoURL}', '_blank')" style="margin-top: 10px;">Open ArgoCD UI</button>
-            `);
-        }
-
-        // Monitoring functions
-        function openGrafana() {
-            const grafanaURL = 'http://a0766309961cd44068e1382b81704655-1493425140.us-east-1.elb.amazonaws.com';
-            showResult('monitoringResults', `
-                <div class="success">📊 Grafana Dashboard</div>
-                <p><strong>Status:</strong> Running in 'monitoring' namespace</p>
-                <p><strong>URL:</strong> <a href="${grafanaURL}" target="_blank">${grafanaURL}</a></p>
-                <p><strong>Login:</strong></p>
-                <ul>
-                    <li>Username: <code>admin</code></li>
-                    <li>Password: <code>admin123</code></li>
-                </ul>
-                <p><strong>Pre-configured Dashboards:</strong></p>
-                <ul>
-                    <li>Kubernetes Cluster Monitoring</li>
-                    <li>Node Exporter Full</li>
-                    <li>Pod Metrics</li>
-                    <li>Persistent Volumes</li>
-                </ul>
-                <button onclick="window.open('${grafanaURL}', '_blank')" style="margin-top: 10px;">Open Grafana</button>
-            `);
-        }
-
-        function showMonitoringInfo() {
-            showResult('monitoringResults', `
-                <div class="success">🔍 Prometheus Monitoring Stack</div>
-                <p><strong>Components Deployed:</strong></p>
-                <ul>
-                    <li>✅ Prometheus Operator</li>
-                    <li>✅ Prometheus Server (metrics collection)</li>
-                    <li>✅ Grafana (visualization)</li>
-                    <li>✅ AlertManager (alerting)</li>
-                    <li>✅ Node Exporter (node metrics)</li>
-                    <li>✅ Kube State Metrics (K8s metrics)</li>
-                </ul>
-                <p><strong>Monitoring Coverage:</strong></p>
-                <ul>
-                    <li>EKS cluster health & performance</li>
-                    <li>Pod CPU, memory, network usage</li>
-                    <li>Service response times</li>
-                    <li>Node resource utilization</li>
-                    <li>Persistent volume metrics</li>
-                </ul>
-                <p><strong>Installed via:</strong> Helm Chart (kube-prometheus-stack)</p>
-            `);
         }
     </script>
 </body>

@@ -109,8 +109,7 @@ resource "google_dataproc_cluster" "analytics_cluster" {
     }
     
     gce_cluster_config {
-      network    = google_compute_network.vpc.name
-      subnetwork = google_compute_subnetwork.subnet.name
+      subnetwork = google_compute_subnetwork.subnet.self_link
       
       internal_ip_only = false
       

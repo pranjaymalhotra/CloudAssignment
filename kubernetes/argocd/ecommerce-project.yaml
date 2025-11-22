@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: ecommerce
+  namespace: argocd
+spec:
+  description: E-Commerce Microservices Platform
+  sourceRepos:
+    - 'https://github.com/pranjaymalhotra/CloudAssignment'
+    - 'https://prometheus-community.github.io/helm-charts'
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'

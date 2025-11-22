@@ -50,6 +50,21 @@ resource "aws_eks_node_group" "main" {
   }
 }
 
+# OIDC Provider for IRSA (IAM Roles for Service Accounts)
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+
+  tags = {
+    Name = "${var.cluster_name}-oidc-provider"
+  }
+}
+
 # IAM Role for EKS Cluster
 resource "aws_iam_role" "eks_cluster" {
   name = "${var.cluster_name}-cluster-role"
@@ -165,3 +180,13 @@ output "cluster_iam_role_arn" {
 output "node_iam_role_arn" {
   value = aws_iam_role.eks_node.arn
 }
+
+output "cluster_oidc_issuer_url" {
+  value = aws_eks_cluster.main.identity[0].oidc[0].issuer
+}
+
+output "cluster_oidc_provider_arn" {
+  value = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}"
+}
+
+data "aws_caller_identity" "current" {}

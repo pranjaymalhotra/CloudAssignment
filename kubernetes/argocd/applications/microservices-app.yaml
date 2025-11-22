@@ -6,15 +6,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'REPLACE_WITH_YOUR_GIT_REPO'
-    targetRevision: HEAD
+    repoURL: https://github.com/pranjaymalhotra/CloudAssignment.git
+    targetRevision: main
     path: kubernetes/base
   destination:
-    server: 'https://kubernetes.default.svc'
+    server: https://kubernetes.default.svc
     namespace: default
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true

@@ -1,0 +1,166 @@
+{
+  "version": 4,
+  "terraform_version": "1.13.0",
+  "serial": 127,
+  "lineage": "cdecdbba-9608-5e4a-20ea-9f2a703bc693",
+  "outputs": {},
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "microservices",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": "notification-service",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:129257836401:repository/ecommerce-notification-service",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": null,
+            "id": "ecommerce-notification-service",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": true
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "ecommerce-notification-service",
+            "registry_id": "129257836401",
+            "repository_url": "129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-notification-service",
+            "tags": {
+              "Name": "notification-service"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "Terraform",
+              "Name": "notification-service",
+              "Project": "ECommerce-Cloud-Assignment"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "order-service",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:129257836401:repository/ecommerce-order-service",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": null,
+            "id": "ecommerce-order-service",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": true
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "ecommerce-order-service",
+            "registry_id": "129257836401",
+            "repository_url": "129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-order-service",
+            "tags": {
+              "Name": "order-service"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "Terraform",
+              "Name": "order-service",
+              "Project": "ECommerce-Cloud-Assignment"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "product-service",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:129257836401:repository/ecommerce-product-service",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": null,
+            "id": "ecommerce-product-service",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": true
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "ecommerce-product-service",
+            "registry_id": "129257836401",
+            "repository_url": "129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product-service",
+            "tags": {
+              "Name": "product-service"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "Terraform",
+              "Name": "product-service",
+              "Project": "ECommerce-Cloud-Assignment"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "user-service",
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:129257836401:repository/ecommerce-user-service",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": null,
+            "id": "ecommerce-user-service",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": true
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "ecommerce-user-service",
+            "registry_id": "129257836401",
+            "repository_url": "129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-user-service",
+            "tags": {
+              "Name": "user-service"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "Terraform",
+              "Name": "user-service",
+              "Project": "ECommerce-Cloud-Assignment"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
