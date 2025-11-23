@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
-# Copy the HTML file to nginx
-COPY index.html /usr/share/nginx/html/
+# Copy the comprehensive demo UI as index.html to nginx
+COPY comprehensive-demo.html /usr/share/nginx/html/index.html
 
 # Expose port 80
 EXPOSE 80

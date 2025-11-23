@@ -46,9 +46,10 @@ module "eks" {
   vpc_id              = module.vpc.vpc_id
   private_subnet_ids  = module.vpc.private_subnet_ids
   node_instance_types = ["t3.medium"]
-  desired_size        = 2
+  desired_size        = 4
   min_size            = 2
-  max_size            = 4
+  max_size            = 6
+  s3_bucket_name      = aws_s3_bucket.data_bucket.id
 }
 
 # RDS Module
@@ -59,6 +60,7 @@ module "rds" {
   db_username         = var.db_username
   db_password         = var.db_password
   vpc_id              = module.vpc.vpc_id
+  vpc_cidr            = var.vpc_cidr
   private_subnet_ids  = module.vpc.private_subnet_ids
   eks_security_group_id = module.eks.cluster_security_group_id
 }
@@ -134,6 +136,18 @@ resource "aws_s3_bucket_versioning" "data_bucket_versioning" {
   }
 }
 
+resource "aws_s3_bucket_cors_configuration" "data_bucket_cors" {
+  bucket = aws_s3_bucket.data_bucket.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "DELETE", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = aws_s3_bucket.data_bucket.id
   
@@ -153,6 +167,7 @@ module "msk" {
   cluster_name       = "${var.project_name}-kafka"
   kafka_version      = "3.5.1"
   vpc_id             = module.vpc.vpc_id
+  vpc_cidr           = var.vpc_cidr
   private_subnet_ids = module.vpc.private_subnet_ids
   eks_security_group_id = module.eks.cluster_security_group_id
 }

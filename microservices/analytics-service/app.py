@@ -1,18 +1,100 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import boto3
 import json
 import os
 from datetime import datetime
+from kafka import KafkaConsumer
+import logging
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # AWS Configuration
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 DYNAMODB_TABLE = os.getenv('ANALYTICS_DYNAMODB_TABLE', 'ecommerce-analytics')
 
+# Kafka Configuration
+KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+KAFKA_SECURITY_PROTOCOL = os.getenv('KAFKA_SECURITY_PROTOCOL', 'PLAINTEXT')
+KAFKA_SSL_CAFILE = os.getenv('KAFKA_SSL_CAFILE', '')
+KAFKA_API_VERSION = os.getenv('KAFKA_API_VERSION', '')
+
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
 table = dynamodb.Table(DYNAMODB_TABLE)
+
+@app.route('/api/analytics/flink/top-users', methods=['GET'])
+def get_flink_top_users():
+    """Get top users from Flink analytics-results topic"""
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        
+        # Create Kafka consumer to read from Flink output topic (supports TLS endpoints)
+        kafka_config = {
+            'bootstrap_servers': [server.strip() for server in KAFKA_BOOTSTRAP_SERVERS.split(',') if server.strip()],
+            'auto_offset_reset': 'earliest',
+            'enable_auto_commit': False,
+            'consumer_timeout_ms': 5000,
+            'value_deserializer': lambda x: json.loads(x.decode('utf-8'))
+        }
+
+        if KAFKA_SECURITY_PROTOCOL:
+            kafka_config['security_protocol'] = KAFKA_SECURITY_PROTOCOL
+
+        if KAFKA_SSL_CAFILE:
+            kafka_config['ssl_cafile'] = KAFKA_SSL_CAFILE
+
+        if KAFKA_API_VERSION:
+            try:
+                version_tuple = tuple(int(part) for part in KAFKA_API_VERSION.replace(',', '.').split('.') if part.strip())
+                if version_tuple:
+                    kafka_config['api_version'] = version_tuple
+                    logger.info(f"Using explicit Kafka API version override: {version_tuple}")
+            except ValueError:
+                logger.warning(f"Invalid KAFKA_API_VERSION '{KAFKA_API_VERSION}', falling back to auto-detection")
+
+        consumer = KafkaConsumer('analytics-results', **kafka_config)
+        
+        # Collect all analytics results
+        user_analytics = {}
+        for message in consumer:
+            try:
+                data = message.value
+                user_id = data.get('user_id')
+                if user_id:
+                    # Keep the latest data for each user
+                    if user_id not in user_analytics or data.get('window_end', '') > user_analytics[user_id].get('window_end', ''):
+                        user_analytics[user_id] = data
+            except Exception as e:
+                logger.error(f"Error processing message: {e}")
+                continue
+        
+        consumer.close()
+        
+        # Convert to list and sort by total_spent
+        results = list(user_analytics.values())
+        results.sort(key=lambda x: x.get('total_spent', 0), reverse=True)
+        
+        # Return top N users
+        top_users = results[:limit]
+        
+        return jsonify({
+            "status": "success",
+            "source": "Flink Real-Time Analytics",
+            "topic": "analytics-results",
+            "total_users_analyzed": len(results),
+            "top_users": top_users,
+            "timestamp": datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error reading Flink results: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "note": "Make sure Flink job is running and producing to analytics-results topic"
+        }), 500
 
 @app.route('/health', methods=['GET'])
 def health():

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-processor
+  labels:
+    app: analytics-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-processor
+  template:
+    metadata:
+      labels:
+        app: analytics-processor
+    spec:
+      containers:
+      - name: processor
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            apt-get update && apt-get install -y ca-certificates
+            pip install kafka-python
+            mkdir -p /app
+            cat > /app/processor.py << 'EOFPYTHON'
+            from kafka import KafkaConsumer, KafkaProducer
+            from collections import defaultdict
+            from datetime import datetime, timedelta, timezone
+            import json
+            import os
+            import logging
+            
+            logging.basicConfig(level=logging.INFO)
+            logger = logging.getLogger(__name__)
+            
+            def create_kafka_consumer():
+                return KafkaConsumer(
+                    'orders-events',
+                    bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
+                    security_protocol='SSL',
+                    ssl_cafile='/etc/ssl/certs/ca-certificates.crt',
+                    group_id='simple-analytics',
+                    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                    api_version=(3, 5, 1),
+                    auto_offset_reset='latest'
+                )
+            
+            def create_kafka_producer():
+                return KafkaProducer(
+                    bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
+                    security_protocol='SSL',
+                    ssl_cafile='/etc/ssl/certs/ca-certificates.crt',
+                    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+                    api_version=(3, 5, 1)
+                )
+            
+            def process_orders():
+                consumer = create_kafka_consumer()
+                producer = create_kafka_producer()
+                
+                user_data = defaultdict(lambda: {
+                    'total_orders': 0,
+                    'total_revenue': 0.0
+                })
+                
+                last_publish = datetime.now(timezone.utc)
+                publish_interval = timedelta(minutes=1)
+                
+                logger.info("Starting analytics processor...")
+                logger.info(f"Kafka: {os.getenv('KAFKA_BOOTSTRAP_SERVERS')}")
+                
+                for message in consumer:
+                    try:
+                        event = message.value
+                        user_id = event.get('user_id')
+                        
+                        # Aggregate per user
+                        user_data[user_id]['total_orders'] += 1
+                        revenue = float(event.get('price', 0)) * int(event.get('quantity', 1))
+                        user_data[user_id]['total_revenue'] += revenue
+                        
+                        # Publish user analytics every minute
+                        now = datetime.now(timezone.utc)
+                        if now - last_publish >= publish_interval:
+                            for user_id, stats in user_data.items():
+                                result = {
+                                    'user_id': user_id,
+                                    'total_orders': stats['total_orders'],
+                                    'total_spent': round(stats['total_revenue'], 2),
+                                    'avg_order_value': round(stats['total_revenue'] / stats['total_orders'], 2) if stats['total_orders'] > 0 else 0,
+                                    'window_end': now.isoformat()
+                                }
+                                producer.send('analytics-results', value=result)
+                                logger.info(f"Published user analytics: {result}")
+                            last_publish = now
+                            producer.flush()
+                    except Exception as e:
+                        logger.error(f"Error: {e}")
+                        continue
+            
+            if __name__ == '__main__':
+                process_orders()
+            EOFPYTHON
+            python /app/processor.py
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KAFKA_BOOTSTRAP_SERVERS
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

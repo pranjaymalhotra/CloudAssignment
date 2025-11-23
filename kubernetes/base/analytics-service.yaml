@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: analytics-service
-        image: REPLACE_WITH_ECR_URI
+        image: 129257836401.dkr.ecr.us-east-1.amazonaws.com/ecommerce-analytics-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:
@@ -32,6 +33,21 @@ spec:
             configMapKeyRef:
               name: app-config
               key: KAFKA_BOOTSTRAP_SERVERS
+        - name: KAFKA_SECURITY_PROTOCOL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KAFKA_SECURITY_PROTOCOL
+        - name: KAFKA_SSL_CAFILE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KAFKA_SSL_CAFILE
+        - name: KAFKA_API_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: KAFKA_API_VERSION
         resources:
           requests:
             memory: "256Mi"

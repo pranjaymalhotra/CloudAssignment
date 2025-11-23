@@ -22,3 +22,8 @@ variable "eks_security_group_id" {
   description = "EKS cluster security group ID"
   type        = string
 }
+
+variable "vpc_cidr" {
+  description = "VPC CIDR block"
+  type        = string
+}

@@ -30,13 +30,14 @@ def create_flink_job():
             order_id VARCHAR,
             quantity INT,
             price DECIMAL(10, 2),
-            timestamp TIMESTAMP(3),
-            WATERMARK FOR timestamp AS timestamp - INTERVAL '5' SECOND
+            `timestamp` TIMESTAMP(3),
+            WATERMARK FOR `timestamp` AS `timestamp` - INTERVAL '5' SECOND
         ) WITH (
             'connector' = 'kafka',
             'topic' = '{input_topic}',
             'properties.bootstrap.servers' = '{kafka_brokers}',
             'properties.group.id' = 'flink-analytics',
+            'properties.security.protocol' = 'SSL',
             'scan.startup.mode' = 'latest-offset',
             'format' = 'json',
             'json.fail-on-missing-field' = 'false',
@@ -57,6 +58,7 @@ def create_flink_job():
             'connector' = 'kafka',
             'topic' = '{output_topic}',
             'properties.bootstrap.servers' = '{kafka_brokers}',
+            'properties.security.protocol' = 'SSL',
             'format' = 'json'
         )
     """)
@@ -66,14 +68,14 @@ def create_flink_job():
     table_env.execute_sql("""
         INSERT INTO analytics_results
         SELECT
-            TUMBLE_START(timestamp, INTERVAL '1' MINUTE) as window_start,
-            TUMBLE_END(timestamp, INTERVAL '1' MINUTE) as window_end,
+            TUMBLE_START(`timestamp`, INTERVAL '1' MINUTE) as window_start,
+            TUMBLE_END(`timestamp`, INTERVAL '1' MINUTE) as window_end,
             COUNT(DISTINCT user_id) as unique_users,
             COUNT(*) as total_orders,
             SUM(price * quantity) as total_revenue,
             AVG(price * quantity) as avg_order_value
         FROM order_events
-        GROUP BY TUMBLE(timestamp, INTERVAL '1' MINUTE)
+        GROUP BY TUMBLE(`timestamp`, INTERVAL '1' MINUTE)
     """)
 
 def main():

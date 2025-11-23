@@ -11,6 +11,14 @@ resource "aws_security_group" "rds" {
     security_groups = [var.eks_security_group_id]
   }
   
+  # Allow access from VPC CIDR for pod-to-RDS connectivity
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+  
   egress {
     from_port   = 0
     to_port     = 0

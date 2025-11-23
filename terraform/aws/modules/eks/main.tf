@@ -122,6 +122,34 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   role       = aws_iam_role.eks_node.name
 }
 
+# S3 Access Policy for nodes (for API Gateway pre-signed URLs)
+resource "aws_iam_policy" "s3_access" {
+  name        = "${var.cluster_name}-s3-access-policy"
+  description = "Allow EKS nodes to access S3 for pre-signed URLs"
+  
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        "arn:aws:s3:::${var.s3_bucket_name}",
+        "arn:aws:s3:::${var.s3_bucket_name}/*"
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_s3_access" {
+  policy_arn = aws_iam_policy.s3_access.arn
+  role       = aws_iam_role.eks_node.name
+}
+
 # Security Group for EKS
 resource "aws_security_group" "eks_cluster" {
   name        = "${var.cluster_name}-cluster-sg"

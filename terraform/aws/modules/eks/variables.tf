@@ -37,3 +37,8 @@ variable "max_size" {
   description = "Maximum number of nodes"
   type        = number
 }
+
+variable "s3_bucket_name" {
+  description = "S3 bucket name for pre-signed URL access"
+  type        = string
+}

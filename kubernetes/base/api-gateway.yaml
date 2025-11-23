@@ -36,6 +36,16 @@ spec:
             configMapKeyRef:
               name: app-config
               key: ORDER_SERVICE_URL
+        - name: S3_BUCKET_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: S3_BUCKET_NAME
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: AWS_REGION
         resources:
           requests:
             memory: "128Mi"

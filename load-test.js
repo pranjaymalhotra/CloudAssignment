@@ -23,7 +23,7 @@ export const options = {
 };
 
 // Get API URL from environment variable
-const API_URL = __ENV.API_URL || 'http://ab5f1ab6f0e634756bc7fb5c74faf562-1234779937.us-east-1.elb.amazonaws.com/api';
+const API_URL = __ENV.API_URL || 'http://ab5f1ab6f0e634756bc7fb5c74faf562-1234779937.us-east-1.elb.amazonaws.com';
 
 export default function () {
   const scenarios = [

@@ -694,7 +694,7 @@
 
         // Monitoring functions
         function openGrafana() {
-            const grafanaURL = 'http://a0766309961cd44068e1382b81704655-1493425140.us-east-1.elb.amazonaws.com';
+            const grafanaURL = 'http://aa07d8229b3e84990b1ce2a5cc1fe2a9-1204573542.us-east-1.elb.amazonaws.com';
             showResult('monitoringResults', `
                 <div class="success">📊 Grafana Dashboard</div>
                 <p><strong>Status:</strong> Running in 'monitoring' namespace</p>
@@ -704,12 +704,12 @@
                     <li>Username: <code>admin</code></li>
                     <li>Password: <code>admin123</code></li>
                 </ul>
-                <p><strong>Pre-configured Dashboards:</strong></p>
+                <p><strong>Data Source:</strong> Prometheus (auto-configured)</p>
+                <p><strong>Available Dashboards:</strong></p>
                 <ul>
                     <li>Kubernetes Cluster Monitoring</li>
-                    <li>Node Exporter Full</li>
-                    <li>Pod Metrics</li>
-                    <li>Persistent Volumes</li>
+                    <li>Custom dashboards can be imported from Grafana.com</li>
+                    <li>Recommended IDs: 315 (K8s cluster), 1860 (Node Exporter)</li>
                 </ul>
                 <button onclick="window.open('${grafanaURL}', '_blank')" style="margin-top: 10px;">Open Grafana</button>
             `);

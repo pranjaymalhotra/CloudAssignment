@@ -4,6 +4,7 @@ import os
 import json
 import logging
 from kafka import KafkaProducer
+from datetime import datetime
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -18,15 +19,35 @@ DB_PASSWORD = os.getenv('DB_PASSWORD')
 
 # Kafka configuration
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+KAFKA_SECURITY_PROTOCOL = os.getenv('KAFKA_SECURITY_PROTOCOL', 'PLAINTEXT')
+KAFKA_SSL_CAFILE = os.getenv('KAFKA_SSL_CAFILE', '')
+KAFKA_API_VERSION = os.getenv('KAFKA_API_VERSION', '')
 producer = None
 
 def get_kafka_producer():
     global producer
     if producer is None:
-        producer = KafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS.split(','),
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
+        kafka_config = {
+            'bootstrap_servers': KAFKA_BOOTSTRAP_SERVERS.split(','),
+            'value_serializer': lambda v: json.dumps(v).encode('utf-8')
+        }
+        
+        if KAFKA_SECURITY_PROTOCOL:
+            kafka_config['security_protocol'] = KAFKA_SECURITY_PROTOCOL
+        
+        if KAFKA_SSL_CAFILE:
+            kafka_config['ssl_cafile'] = KAFKA_SSL_CAFILE
+        
+        if KAFKA_API_VERSION:
+            try:
+                version_tuple = tuple(int(part) for part in KAFKA_API_VERSION.replace(',', '.').split('.') if part.strip())
+                if version_tuple:
+                    kafka_config['api_version'] = version_tuple
+                    logger.info(f"Using explicit Kafka API version override: {version_tuple}")
+            except ValueError:
+                logger.warning(f"Invalid KAFKA_API_VERSION '{KAFKA_API_VERSION}', falling back to auto-detection")
+        
+        producer = KafkaProducer(**kafka_config)
     return producer
 
 def get_db_connection():
@@ -108,7 +129,8 @@ def create_order():
         user_id = data.get('user_id')
         product_id = data.get('product_id')
         quantity = data.get('quantity', 1)
-        total_price = data.get('total_price', 0.0)
+        # Accept both 'price' and 'total_price' for backwards compatibility
+        price = data.get('price', data.get('total_price', 0.0))
         
         if not user_id or not product_id:
             return jsonify({"error": "User ID and Product ID required"}), 400
@@ -117,7 +139,7 @@ def create_order():
         cursor = conn.cursor()
         cursor.execute(
             'INSERT INTO orders (user_id, product_id, quantity, total_price, status) VALUES (%s, %s, %s, %s, %s)',
-            (user_id, product_id, quantity, total_price, 'pending')
+            (user_id, product_id, quantity, price, 'pending')
         )
         conn.commit()
         order_id = cursor.lastrowid
@@ -125,19 +147,20 @@ def create_order():
         
         # Publish to Kafka
         order_event = {
-            "order_id": order_id,
-            "user_id": user_id,
-            "product_id": product_id,
+            "order_id": str(order_id),
+            "user_id": str(user_id),
+            "product_id": str(product_id),
             "quantity": quantity,
-            "total_price": total_price,
+            "price": float(price),
+            "timestamp": datetime.utcnow().isoformat() + 'Z',
             "status": "pending"
         }
         
         try:
             kafka_producer = get_kafka_producer()
-            kafka_producer.send('orders', value=order_event)
+            kafka_producer.send('orders-events', value=order_event)
             kafka_producer.flush()
-            logger.info(f"Order event published to Kafka: {order_id}")
+            logger.info(f"Order event published to Kafka topic 'orders-events': {order_id}")
         except Exception as kafka_error:
             logger.error(f"Error publishing to Kafka: {kafka_error}")
         
