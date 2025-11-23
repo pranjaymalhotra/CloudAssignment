@@ -768,26 +768,6 @@ Inter-Service Authentication Flow:
 - Order Service → Payment Service: Payment processing
 - Order Service → User Service: User validation
 
-**Implementation**:
-```python
-# Example: Order Service calling Product Service
-import requests
-
-response = requests.get(
-    f"{PRODUCT_SERVICE_URL}/api/products/{product_id}",
-    headers={"Authorization": f"Bearer {service_token}"},
-    timeout=5  # 5 second timeout
-)
-
-if response.status_code == 200:
-    product = response.json()
-    # Process product data
-elif response.status_code == 404:
-    raise ProductNotFoundException()
-else:
-    raise ServiceCommunicationException()
-```
-
 **Service Discovery**:
 - Uses Kubernetes DNS: `http://product-service.default.svc.cluster.local:80`
 - Short form: `http://product-service:80`
@@ -834,64 +814,7 @@ Topic: analytics-results
   Compression: gzip
 ```
 
-**Producer Implementation** (Order Service):
-```python
-from kafka import KafkaProducer
-import json
-
-producer = KafkaProducer(
-    bootstrap_servers=KAFKA_BROKERS,
-    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-    acks='all',  # Wait for all replicas
-    retries=3,
-    max_in_flight_requests_per_connection=1  # Preserve order
-)
-
-# Produce event
-order_event = {
-    'event_type': 'order_created',
-    'order_id': order.id,
-    'user_id': order.user_id,
-    'total_amount': float(order.total_amount),
-    'items': [item.to_dict() for item in order.items],
-    'timestamp': datetime.utcnow().isoformat()
-}
-
-future = producer.send('orders', value=order_event)
-record_metadata = future.get(timeout=10)
-print(f"Sent to partition {record_metadata.partition}")
-```
-
-**Consumer Implementation** (Notification Service):
-```python
-from kafka import KafkaConsumer
-import json
-
-consumer = KafkaConsumer(
-    'orders',
-    bootstrap_servers=KAFKA_BROKERS,
-    group_id='notification-service-group',
-    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-    auto_offset_reset='earliest',
-    enable_auto_commit=False,  # Manual commit
-    max_poll_records=10
-)
-
-for message in consumer:
-    try:
-        event = message.value
-        
-        if event['event_type'] == 'order_created':
-            send_order_confirmation(event)
-        elif event['event_type'] == 'order_shipped':
-            send_shipping_notification(event)
-        
-        # Manual commit after successful processing
-        consumer.commit()
-    except Exception as e:
-        logger.error(f"Processing failed: {e}")
-        # Don't commit - message will be reprocessed
-```
+**Implementation**: Order Service publishes events to Kafka with `acks='all'` for durability. Notification Service consumes with manual commits for guaranteed processing.
 
 **Benefits**:
 - Loose coupling
@@ -915,53 +838,9 @@ for message in consumer:
 
 **Pattern**: Direct database connections
 
-**User Service → PostgreSQL**:
-```python
-# SQLAlchemy ORM
-from flask_sqlalchemy import SQLAlchemy
+**User Service → PostgreSQL**: Uses SQLAlchemy ORM for database operations with session-based transactions
 
-db = SQLAlchemy()
-
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True)
-    email = db.Column(db.String(120), unique=True)
-
-# Query
-user = User.query.filter_by(username='john').first()
-
-# Transaction
-db.session.add(new_user)
-db.session.commit()
-```
-
-**Product Service → DynamoDB**:
-```python
-# Boto3 SDK
-import boto3
-
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('products')
-
-# Get item
-response = table.get_item(Key={'id': product_id})
-product = response.get('Item')
-
-# Put item
-table.put_item(Item={
-    'id': product_id,
-    'name': 'Laptop',
-    'price': Decimal('999.99'),
-    'stock_quantity': 50
-})
-
-# Query with GSI
-response = table.query(
-    IndexName='category-index',
-    KeyConditionExpression=Key('category').eq('Electronics')
-)
-```
+**Product Service → DynamoDB**: Uses Boto3 SDK for NoSQL operations (get_item, put_item, query with GSI)
 
 **Connection Pooling**:
 - PostgreSQL: pgbouncer (session pooling)
@@ -970,85 +849,15 @@ response = table.query(
 
 #### 4. Caching Strategy (Redis)
 
-**Pattern**: Read-through cache
-
-**Use Cases**:
-- Product catalog caching
-- User session storage
-- Rate limiting counters
-- Frequently accessed data
-
-**Implementation**:
-```python
-import redis
-
-redis_client = redis.Redis(
-    host='redis.default.svc.cluster.local',
-    port=6379,
-    db=0,
-    decode_responses=True
-)
-
-# Cache product data
-def get_product(product_id):
-    # Try cache first
-    cache_key = f"product:{product_id}"
-    cached = redis_client.get(cache_key)
-    
-    if cached:
-        return json.loads(cached)
-    
-    # Cache miss - fetch from database
-    product = fetch_from_dynamodb(product_id)
-    
-    # Store in cache (TTL: 1 hour)
-    redis_client.setex(
-        cache_key,
-        3600,
-        json.dumps(product)
-    )
-    
-    return product
-```
+**Pattern**: Read-through cache with 1-hour TTL for product catalog, user sessions, and rate limiting
 
 ### Service Resilience Patterns
 
 #### Circuit Breaker (Planned)
-```python
-from pybreaker import CircuitBreaker
-
-# Trips after 5 failures in 60 seconds
-breaker = CircuitBreaker(fail_max=5, timeout_duration=60)
-
-@breaker
-def call_product_service(product_id):
-    response = requests.get(f"{PRODUCT_SERVICE_URL}/api/products/{product_id}")
-    return response.json()
-
-try:
-    product = call_product_service(123)
-except CircuitBreakerOpen:
-    # Return cached data or default
-    product = get_cached_product(123)
-```
+Uses pybreaker library with 5-failure threshold in 60-second window for service degradation
 
 #### Retry with Exponential Backoff
-```python
-from tenacity import retry, stop_after_attempt, wait_exponential
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=1, max=10)
-)
-def call_payment_service(payment_data):
-    response = requests.post(
-        f"{PAYMENT_SERVICE_URL}/api/payments/process",
-        json=payment_data,
-        timeout=10
-    )
-    response.raise_for_status()
-    return response.json()
-```
+Implemented using tenacity library: 3 attempts with exponential wait (1s to 10s)
 
 #### Timeout Configuration
 - API Gateway → Services: 30 seconds
@@ -1060,32 +869,7 @@ def call_payment_service(payment_data):
 ### Data Consistency Patterns
 
 #### Strong Consistency (ACID Transactions)
-- User Service: PostgreSQL transactions
-- Order Service: PostgreSQL transactions
-- Payment Service: PostgreSQL transactions
-
-```python
-# Example: Order creation with transaction
-try:
-    db.session.begin()
-    
-    # Create order
-    order = Order(user_id=user_id, total=total)
-    db.session.add(order)
-    db.session.flush()  # Get order ID
-    
-    # Create order items
-    for item in items:
-        order_item = OrderItem(order_id=order.id, **item)
-        db.session.add(order_item)
-    
-    # Commit transaction
-    db.session.commit()
-    
-except Exception as e:
-    db.session.rollback()
-    raise
-```
+User, Order, and Payment services use PostgreSQL transactions with rollback on failure
 
 #### Eventual Consistency (Event-Driven)
 - Order events to notifications
@@ -1100,50 +884,14 @@ except Exception as e:
 ### Security in Service Communication
 
 #### Mutual TLS (Future Enhancement)
-```yaml
-apiVersion: v1
-kind: ServiceMesh
-metadata:
-  name: istio-config
-spec:
-  mtls:
-    mode: STRICT  # Enforce mTLS between all services
-```
+Service mesh (Istio) planned for strict mTLS enforcement between all services
 
 #### API Authentication
 - **External**: JWT tokens from User Service
 - **Internal**: Service accounts with Kubernetes secrets
 
 #### Network Policies
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: order-service-netpol
-spec:
-  podSelector:
-    matchLabels:
-      app: order-service
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: api-gateway
-    ports:
-    - protocol: TCP
-      port: 5003
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app: product-service
-    ports:
-    - protocol: TCP
-      port: 5002
-```
+Kubernetes NetworkPolicy configured to restrict traffic: Order Service only accepts ingress from API Gateway, egress to Product Service
 
 ---
 
