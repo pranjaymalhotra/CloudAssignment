@@ -42,101 +42,58 @@ The platform is a scalable e-commerce solution that enables:
 
 ### High-Level Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              INTERNET / USERS                                │
-└────────────────────────────────┬────────────────────────────────────────────┘
-                                 │ HTTPS
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            AWS CLOUD (Primary)                               │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    VPC (10.0.0.0/16)                                  │  │
-│  │  ┌────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                    Public Subnets (Multi-AZ)                    │  │  │
-│  │  │  ┌──────────────┐           ┌──────────────┐                   │  │  │
-│  │  │  │  AWS ALB     │           │   Ingress    │                   │  │  │
-│  │  │  │  (Layer 7)   │──────────▶│  Controller  │                   │  │  │
-│  │  │  └──────────────┘           └──────┬───────┘                   │  │  │
-│  │  └─────────────────────────────────────┼─────────────────────────┘  │  │
-│  │                                         ▼                              │  │
-│  │  ┌──────────────────────────────────────────────────────────────┐    │  │
-│  │  │              Amazon EKS Cluster (Kubernetes 1.27)             │    │  │
-│  │  │  ┌──────────────────────────────────────────────────────┐    │    │  │
-│  │  │  │              Microservices Pods                       │    │    │  │
-│  │  │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │    │    │  │
-│  │  │  │  │   API    │  │  User    │  │ Product  │           │    │    │  │
-│  │  │  │  │ Gateway  │─▶│ Service  │  │ Service  │           │    │    │  │
-│  │  │  │  │ (2-10x)  │  │  (2x)    │  │  (2x)    │           │    │    │  │
-│  │  │  │  └──────────┘  └────┬─────┘  └────┬─────┘           │    │    │  │
-│  │  │  │                     │             │                  │    │    │  │
-│  │  │  │  ┌──────────┐      │             │                  │    │    │  │
-│  │  │  │  │  Order   │◀─────┘             ▼                  │    │    │  │
-│  │  │  │  │ Service  │              ┌──────────┐             │    │    │  │
-│  │  │  │  │ (2-8x)   │◀─────────────│ Payment  │             │    │    │  │
-│  │  │  │  └────┬─────┘              │ Service  │             │    │    │  │
-│  │  │  │       │                    │  (2x)    │             │    │    │  │
-│  │  │  │       │ Kafka Events       └──────────┘             │    │    │  │
-│  │  │  │       ├──────────────┐                              │    │    │  │
-│  │  │  │       │              ▼                              │    │    │  │
-│  │  │  │       │        ┌──────────────┐                     │    │    │  │
-│  │  │  │       │        │ Notification │                     │    │    │  │
-│  │  │  │       │        │   Service    │                     │    │    │  │
-│  │  │  │       │        │    (1x)      │                     │    │    │  │
-│  │  │  │       │        └──────────────┘                     │    │    │  │
-│  │  │  └───────┼─────────────────────────────────────────────┘    │    │  │
-│  │  │          │                                                   │    │  │
-│  │  │          │ HPA: Horizontal Pod Autoscaler                    │    │  │
-│  │  │          │ Prometheus: Metrics Collection                    │    │  │
-│  │  │          │ ArgoCD: GitOps Deployment                         │    │  │
-│  │  └──────────┼───────────────────────────────────────────────────┘    │  │
-│  │             │                                                         │  │
-│  │  ┌──────────▼──────────────────────────────────────────────────┐    │  │
-│  │  │               Private Subnets (Multi-AZ)                     │    │  │
-│  │  │  ┌───────────┐  ┌────────────┐  ┌──────────┐               │    │  │
-│  │  │  │   RDS     │  │ DynamoDB   │  │  Redis   │               │    │  │
-│  │  │  │PostgreSQL │  │(Products)  │  │ (Cache)  │               │    │  │
-│  │  │  │(Multi-AZ) │  └────────────┘  └──────────┘               │    │  │
-│  │  │  └───────────┘                                              │    │  │
-│  │  │  ┌─────────────────────────────┐                           │    │  │
-│  │  │  │     AWS MSK (Kafka)         │                           │    │  │
-│  │  │  │  - orders topic             │                           │    │  │
-│  │  │  │  - analytics-results topic  │                           │    │  │
-│  │  │  └──────────────┬──────────────┘                           │    │  │
-│  │  └─────────────────┼────────────────────────────────────────────    │  │
-│  └────────────────────┼──────────────────────────────────────────────────┘
-│                       │                                                     │
-│  ┌────────────────────┼────────────────────────────────────────────────┐  │
-│  │                    │  Additional AWS Services                        │  │
-│  │  ┌─────────────┐   │   ┌──────────┐   ┌─────────────┐             │  │
-│  │  │    S3       │   │   │ Lambda   │   │   ECR       │             │  │
-│  │  │ (Storage)   │   │   │(Serverless)│ │(Container   │             │  │
-│  │  └─────────────┘   │   └──────────┘   │ Registry)   │             │  │
-│  └────────────────────┼──────────────────└─────────────┘─────────────┘  │
-└───────────────────────┼─────────────────────────────────────────────────┘
-                        │ Cross-Cloud Kafka Connection
-                        ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         GOOGLE CLOUD (Analytics)                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     GCP Dataproc Cluster                               │  │
-│  │  ┌─────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                  Apache Flink Analytics Job                      │  │  │
-│  │  │  ┌──────────────┐      ┌──────────────┐     ┌────────────────┐ │  │  │
-│  │  │  │Kafka Consumer│─────▶│Stream Process│────▶│ Kafka Producer │ │  │  │
-│  │  │  │(orders topic)│      │  (Window Agg)│     │(analytics topic)│  │  │
-│  │  │  └──────────────┘      └──────────────┘     └────────────────┘ │  │  │
-│  │  └─────────────────────────────────────────────────────────────────┘  │  │
-│  │                                 │                                      │  │
-│  │  ┌──────────────────────────────▼───────────────────────────────┐    │  │
-│  │  │            GCS (Google Cloud Storage)                         │    │  │
-│  │  │  - Flink checkpoints                                          │    │  │
-│  │  │  - Analytics results                                          │    │  │
-│  │  │  - Data lake storage                                          │    │  │
-│  │  └───────────────────────────────────────────────────────────────┘    │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+**INTERNET / USERS**
+  ↓ (HTTPS)
+
+**AWS CLOUD (Primary)**
+
+**VPC (10.0.0.0/16) - Multi-AZ Architecture**
+
+1. **Public Subnets** (us-east-1a, us-east-1b)
+   - AWS Application Load Balancer (Layer 7)
+   - Ingress Controller (NGINX)
+
+2. **Amazon EKS Cluster** (Kubernetes 1.27)
+   - **Microservices Pods:**
+     - API Gateway (2-10 replicas with HPA)
+     - User Service (2 replicas static)
+     - Product Service (2 replicas static)
+     - Order Service (2-8 replicas with HPA)
+     - Payment Service (2 replicas static)
+     - Notification Service (1 replica)
+   - **Management:**
+     - Horizontal Pod Autoscaler (HPA)
+     - Prometheus (Metrics Collection)
+     - ArgoCD (GitOps Deployment)
+
+3. **Private Subnets** (us-east-1a, us-east-1b)
+   - RDS PostgreSQL (Multi-AZ) - Users, Orders, Payments
+   - DynamoDB (On-demand) - Product Catalog
+   - Redis (ElastiCache) - Caching Layer
+   - AWS MSK (Kafka) - Event Streaming
+     - orders topic (3 partitions, replication factor 2)
+     - analytics-results topic (3 partitions, replication factor 2)
+
+4. **Additional AWS Services**
+   - S3 (Object Storage)
+   - Lambda (Serverless Functions)
+   - ECR (Container Registry)
+   - Route 53 (DNS)
+   - CloudWatch (Monitoring)
+
+  ↓ (Cross-Cloud Kafka Connection)
+
+**GOOGLE CLOUD (Analytics)**
+
+**GCP Dataproc Cluster**
+- Apache Flink Analytics Job
+  - Kafka Consumer (orders topic)
+  - Stream Processing (Window Aggregation)
+  - Kafka Producer (analytics-results topic)
+- Google Cloud Storage (GCS)
+  - Flink checkpoints
+  - Analytics results
+  - Data lake storage
 
 ### Multi-Cloud Strategy
 
@@ -381,12 +338,12 @@ The platform is a scalable e-commerce solution that enables:
 - **Scaling Strategy**: 
   - HPA based on CPU (70%) and memory (80%)
   - Min: 2 replicas, Max: 10 replicas
-  - Scale up: 100% increase every 30s
-  - Scale down: 50% decrease every 5min
+  - Scale up: 100% increase every 15s or 2 pods every 15s (whichever is higher)
+  - Scale down: 50% decrease every 60s with 300s stabilization window
   
 - **Resource Allocation**:
-  - Requests: 256Mi memory, 250m CPU
-  - Limits: 512Mi memory, 500m CPU
+  - Requests: 128Mi memory, 100m CPU
+  - Limits: 256Mi memory, 200m CPU
 
 #### 2. User Service
 - **Port**: 5001
@@ -425,8 +382,8 @@ The platform is a scalable e-commerce solution that enables:
 - **Scaling Strategy**: Static 2 replicas (low variance in load)
   
 - **Resource Allocation**:
-  - Requests: 256Mi memory, 250m CPU
-  - Limits: 512Mi memory, 500m CPU
+  - Requests: 128Mi memory, 100m CPU
+  - Limits: 256Mi memory, 200m CPU
 
 #### 3. Product Service
 - **Port**: 5002
@@ -529,12 +486,14 @@ The platform is a scalable e-commerce solution that enables:
   - Event payload includes order details for downstream processing
   
 - **Scaling Strategy**: 
-  - HPA based on CPU (70%)
+  - HPA based on CPU (70%) and memory (80%)
   - Min: 2 replicas, Max: 8 replicas
+  - Scale up: 100% increase every 15s or 2 pods every 15s
+  - Scale down: 50% decrease every 60s
   
 - **Resource Allocation**:
-  - Requests: 512Mi memory, 500m CPU
-  - Limits: 1Gi memory, 1000m CPU
+  - Requests: 128Mi memory, 100m CPU
+  - Limits: 256Mi memory, 200m CPU
 
 #### 5. Payment Service
 - **Port**: 5005
@@ -570,8 +529,8 @@ The platform is a scalable e-commerce solution that enables:
 - **Scaling Strategy**: Static 2 replicas
   
 - **Resource Allocation**:
-  - Requests: 256Mi memory, 250m CPU
-  - Limits: 512Mi memory, 500m CPU
+  - Requests: 128Mi memory, 100m CPU
+  - Limits: 256Mi memory, 200m CPU
 
 #### 6. Notification Service
 - **Port**: 5004

@@ -11,7 +11,7 @@ data:
   DYNAMODB_TABLE: "ecommerce-products"
   AWS_REGION: "us-east-1"
   S3_BUCKET_NAME: "ecommerce-data-bucket-129257836401"
-  KAFKA_BOOTSTRAP_SERVERS: "b-1.ecommercekafka.f372ak.c6.kafka.us-east-1.amazonaws.com:9094,b-2.ecommercekafka.f372ak.c6.kafka.us-east-1.amazonaws.com:9094"
+  KAFKA_BOOTSTRAP_SERVERS: "b-1.ecommercekafka.sexwyl.c6.kafka.us-east-1.amazonaws.com:9094,b-2.ecommercekafka.sexwyl.c6.kafka.us-east-1.amazonaws.com:9094"
   KAFKA_SECURITY_PROTOCOL: "SSL"
   KAFKA_SSL_CAFILE: "/etc/ssl/certs/ca-certificates.crt"
   KAFKA_API_VERSION: "3.5.1"
