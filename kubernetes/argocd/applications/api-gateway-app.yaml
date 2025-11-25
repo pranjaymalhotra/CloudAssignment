@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'REPLACE_WITH_YOUR_GIT_REPO'
-    targetRevision: HEAD
+    repoURL: https://github.com/pranjaymalhotra/CloudAssignment
+    targetRevision: main
     path: kubernetes/base
     directory:
       include: 'api-gateway.yaml'
